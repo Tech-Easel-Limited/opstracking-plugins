@@ -18,6 +18,12 @@ projects, tasks, time entries, clients, people, assets and invoices.
   telemetry or crash reporting.
 - **What it sends.** Only the requests needed for what you ask the assistant
   to do, authenticated with your connection's API token.
+- **Personal data.** It reads personal data held in your OpsTracking — names
+  and email addresses of workspace members, client contacts and invoice
+  recipients — and, when you confirm, writes it there (for example a new
+  client contact, a task assignee or an invite request). What it writes is
+  kept in your organization's OpsTracking account until someone there
+  changes or archives it.
 - **What your assistant sees.** Results of those requests are returned to the
   assistant you are using (Claude Code or Cursor) so it can answer you. How
   that assistant handles conversation data is covered by its own provider's
