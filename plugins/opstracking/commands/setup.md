@@ -1,4 +1,5 @@
 ---
+name: setup
 description: Connect to your OpsTracking (first time, again, or at a new address) — approved in your browser
 argument-hint: "[your OpsTracking address]"
 ---

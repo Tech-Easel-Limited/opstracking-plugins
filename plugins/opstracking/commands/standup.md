@@ -1,4 +1,5 @@
 ---
+name: standup
 description: Write today's standup update from your OpsTracking time and tasks (read-only)
 ---
 

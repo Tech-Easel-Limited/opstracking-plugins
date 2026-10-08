@@ -1,4 +1,5 @@
 ---
+name: new-task
 description: Draft an OpsTracking task from a short description or a pasted bug report, then create it after you confirm
 argument-hint: <what needs doing, or a pasted bug report>
 ---
