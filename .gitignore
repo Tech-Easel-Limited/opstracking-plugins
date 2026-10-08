@@ -1,0 +1,4 @@
+node_modules/
+mcp/dist/
+mcp/release/
+.DS_Store

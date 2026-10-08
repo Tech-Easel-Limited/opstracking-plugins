@@ -1,0 +1,25 @@
+{
+  "name": "opstracking",
+  "displayName": "OpsTracking",
+  "version": "0.2.0",
+  "description": "Work with OpsTracking from Cursor: read projects, tasks, time, clients, assets and invoices; change what you allowed — projects, teams, clients, tasks, time and invoice drafts — always with your confirmation first; and ask for invites, roles and invoice sends that you approve in the app.",
+  "author": {
+    "name": "Amento Tech",
+    "url": "https://github.com/Tech-Easel-Limited/opstracking-plugins"
+  },
+  "homepage": "https://github.com/Tech-Easel-Limited/opstracking-plugins",
+  "repository": "https://github.com/Tech-Easel-Limited/opstracking-plugins",
+  "license": "MIT",
+  "logo": "./assets/logo.png",
+  "keywords": [
+    "opstracking",
+    "project-management",
+    "tasks",
+    "time-tracking",
+    "invoicing",
+    "mcp"
+  ],
+  "commands": "./cursor/commands/",
+  "skills": "./cursor/skills/",
+  "mcpServers": "./mcp.json"
+}

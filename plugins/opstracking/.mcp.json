@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "opstracking": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/opstracking-mcp.mjs"],
+      "env": {
+        "OPSTRACKING_URL": "${user_config.url}",
+        "OPSTRACKING_TOKEN": "${user_config.token}",
+        "OPSTRACKING_WORKSPACE": "${user_config.workspace}"
+      }
+    }
+  }
+}

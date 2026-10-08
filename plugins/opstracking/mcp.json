@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "opstracking": {
+      "command": "node",
+      "args": [
+        "${CURSOR_PLUGIN_ROOT}/server/opstracking-mcp.mjs"
+      ]
+    }
+  }
+}

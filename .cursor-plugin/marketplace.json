@@ -1,0 +1,22 @@
+{
+  "name": "amento-tech",
+  "owner": {
+    "name": "Amento Tech",
+    "url": "https://github.com/Tech-Easel-Limited/opstracking-plugins"
+  },
+  "metadata": {
+    "description": "Cursor plugins for OpsTracking."
+  },
+  "plugins": [
+    {
+      "name": "opstracking",
+      "source": "./plugins/opstracking",
+      "description": "Work with OpsTracking from Cursor: read projects, tasks, time, clients, assets and invoices; change what you allowed — projects, teams, clients, tasks, time and invoice drafts — always with your confirmation first; and ask for invites, roles and invoice sends that you approve in the app.",
+      "version": "0.2.0",
+      "author": {
+        "name": "Amento Tech",
+        "url": "https://github.com/Tech-Easel-Limited/opstracking-plugins"
+      }
+    }
+  ]
+}

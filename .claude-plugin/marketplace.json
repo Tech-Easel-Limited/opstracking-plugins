@@ -1,0 +1,31 @@
+{
+  "name": "amento-tech",
+  "owner": {
+    "name": "Amento Tech",
+    "url": "https://github.com/Tech-Easel-Limited/opstracking-plugins"
+  },
+  "description": "Claude Code plugins for OpsTracking.",
+  "plugins": [
+    {
+      "name": "opstracking",
+      "source": "./plugins/opstracking",
+      "displayName": "OpsTracking",
+      "description": "Projects, tasks, time tracking, clients, assets and invoice drafts in OpsTracking, with approval requests for invites and invoice sends, through its MCP server.",
+      "version": "0.2.0",
+      "author": {
+        "name": "Amento Tech"
+      },
+      "repository": "https://github.com/Tech-Easel-Limited/opstracking-plugins",
+      "keywords": [
+        "opstracking",
+        "tasks",
+        "time-tracking",
+        "invoicing",
+        "mcp"
+      ],
+      "homepage": "https://github.com/Tech-Easel-Limited/opstracking-plugins",
+      "license": "MIT",
+      "category": "productivity"
+    }
+  ]
+}
