@@ -117,7 +117,8 @@ function cursorManifest(claude) {
     homepage: claude.homepage,
     repository: claude.repository,
     license: claude.license,
-    logo: claude.icon,
+    // Cursor asks for a square logo on a background plate; the Claude icon is the bare mark.
+    logo: "./assets/logo-plate.svg",
     keywords: claude.keywords,
   };
   return Object.fromEntries(Object.entries(manifest).filter(([, v]) => v !== undefined));
