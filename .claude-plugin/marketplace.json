@@ -11,7 +11,7 @@
       "source": "./plugins/opstracking",
       "displayName": "OpsTracking",
       "description": "Projects, tasks, time tracking, clients, assets and invoice drafts in OpsTracking, with approval requests for invites and invoice sends, through its MCP server.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "Amento Tech"
       },

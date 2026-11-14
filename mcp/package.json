@@ -1,6 +1,6 @@
 {
   "name": "@opstracking/mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Model Context Protocol server for OpsTracking: projects, tasks, time tracking, clients and invoices.",
   "license": "MIT",
   "author": "Amento Tech",
@@ -20,7 +20,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "bundle": "node scripts/package.mjs --bundle-only",
+    "build:server": "node scripts/package.mjs --server-only",
     "package": "pnpm test && node scripts/package.mjs",
     "build:repo": "node scripts/package.mjs --repo"
   },

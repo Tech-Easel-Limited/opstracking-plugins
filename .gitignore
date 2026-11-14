@@ -1,4 +1,6 @@
 node_modules/
+# The plugin ships the dependency files its server loads (mcp/scripts/package.mjs).
+!/plugins/opstracking/server/node_modules/
 mcp/dist/
 mcp/release/
 .DS_Store

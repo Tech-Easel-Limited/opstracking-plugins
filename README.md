@@ -44,7 +44,9 @@ live, clone this repository and copy `plugins/opstracking` to
 plugins/opstracking/              the plugin both apps install
   .claude-plugin/plugin.json      Claude manifest, .mcp.json, commands/, skills/
   .cursor-plugin/plugin.json      Cursor manifest, mcp.json, cursor/ (generated)
-  server/opstracking-mcp.mjs      the MCP server, bundled from mcp/src (generated)
+  server/                         the MCP server, built from mcp/src (generated): lib/ one
+                                  compiled file per module, node_modules/ the dependency
+                                  files it loads, unbundled so every file stays readable
 mcp/                              the server's TypeScript source and tests
 ```
 

@@ -18,6 +18,8 @@ working days.
 - Text written by workspace members is passed to the assistant inside
   `<workspace-data>` tags and the bundled skill tells the assistant to treat
   it as data, never as instructions.
-- `plugins/opstracking/server/opstracking-mcp.mjs` is an unminified bundle of
-  the TypeScript source in `mcp/src`. CI rebuilds it from source on every
-  push and fails if the committed file differs.
+- `plugins/opstracking/server/` is built from the TypeScript source in
+  `mcp/src`: `lib/` holds one compiled file per module and `node_modules/`
+  the dependency files the server loads, copied unchanged from the published
+  packages. Nothing is bundled or minified. CI rebuilds it from source on
+  every push and fails if the committed files differ.

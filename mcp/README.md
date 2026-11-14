@@ -20,9 +20,11 @@ token. It can do exactly what you can do in the app, and less: see [Security mod
 
 The server is not published to a package registry. `pnpm package` (see
 [Building the release](#building-the-release)) produces the Claude and Cursor
-plugins with the server already inside them — one self-contained file,
-`server/opstracking-mcp.mjs`, with every dependency bundled, so nothing is
-installed from the internet:
+plugins with the server already inside them — `server/opstracking-mcp.mjs`
+starts it, `server/lib/` is its code compiled one file per module, and
+`server/node_modules/` holds the dependency files it loads, copied as
+published. Nothing is installed from the internet, and nothing is bundled or
+minified, so every file can be read:
 
 - `opstracking-plugins/` (and `opstracking-plugins.zip`, the same folder
   zipped to send it) — ONE marketplace folder that **Claude Code and Cursor
@@ -254,16 +256,16 @@ variables set.
 cd mcp && pnpm install && pnpm package
 ```
 
-`pnpm package` runs the tests, then `scripts/package.mjs`: it bundles the
-server into `plugins/opstracking/server/opstracking-mcp.mjs` and writes, into
-`mcp/release/`:
+`pnpm package` runs the tests, then `scripts/package.mjs`: it builds the
+server into `plugins/opstracking/server/` (readable files, none over 256 KB)
+and writes, into `mcp/release/`:
 
 | File | What |
 | --- | --- |
 | `opstracking-plugins/` | The marketplace folder Claude Code and Cursor both add: both marketplace files, the plugin, INSTALL.md and INSTALL-CURSOR.md |
 | `opstracking-plugins.zip` | That folder, zipped to send — unzipped before installing |
 | `opstracking-plugin.zip` | The plugin alone at the top, for Upload plugin in the Claude desktop app |
-| `opstracking-mcp.mjs` | The bare server |
+| `opstracking-mcp.mjs` | The bare server as one bundled file, for running it outside a plugin |
 
 There is one source: `plugins/opstracking/`. The released plugin is that
 folder unchanged plus Cursor's files, generated and never committed:
@@ -276,7 +278,8 @@ environment; the same skill in `cursor/skills/`; and in `cursor/commands/` the
 commands renamed `opstracking-<name>` (with a `name` in
 their front matter, since Cursor lists plugin commands without the plugin
 prefix Claude adds) and `/opstracking:<name>` rewritten to match. The script
-deletes nothing outside `mcp/release/`. `pnpm bundle` only bundles.
+deletes nothing outside `mcp/release/` and `plugins/opstracking/server/`.
+`pnpm build:server` only rebuilds `plugins/opstracking/server/`.
 
 Both output paths are git-ignored — the zips are the things you send. Rebuild
 them whenever the server changes, and bump `version` in `package.json`,

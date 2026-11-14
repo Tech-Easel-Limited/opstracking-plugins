@@ -4,7 +4,11 @@
  *
  *   plugins/opstracking/            the Claude plugin (committed): manifest, .mcp.json,
  *                                   skills/, commands/
- *   plugins/opstracking/server/     the bundled server (built here, git-ignored)
+ *   plugins/opstracking/server/     the server as readable files (built here, committed):
+ *                                   lib/ compiled from mcp/src one module per file, and
+ *                                   node_modules/ holding only the dependency files it loads,
+ *                                   as their packages publish them — no bundle, so the plugin
+ *                                   directory's security scan can read every file
  *
  * into mcp/release/ (git-ignored):
  *
@@ -24,12 +28,12 @@
  * cursor/skills/ with the names Cursor shows (`/opstracking-setup` where Claude
  * shows `/opstracking:setup`). Neither app reads the other's files.
  *
- * Nothing outside mcp/release/ is deleted; the only file written outside it is
- * the bundle in plugins/opstracking/server/.
+ * Nothing outside mcp/release/ and plugins/opstracking/server/ is deleted or
+ * written, apart from Cursor's generated files with --repo.
  *
  *   node scripts/package.mjs                 everything
- *   node scripts/package.mjs --bundle-only   just the bundle (`pnpm bundle`)
- *   node scripts/package.mjs --repo          the bundle plus Cursor's generated files, written into
+ *   node scripts/package.mjs --server-only   just plugins/opstracking/server/ (`pnpm build:server`)
+ *   node scripts/package.mjs --repo          the server plus Cursor's generated files, written into
  *                                            the repository itself (`pnpm build:repo`), because both
  *                                            marketplaces install straight from the Git repository
  */
@@ -42,7 +46,7 @@ import { build } from "esbuild";
 const MCP = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(MCP, "..");
 const PLUGIN = join(ROOT, "plugins", "opstracking");
-const BUNDLE = join(PLUGIN, "server", "opstracking-mcp.mjs");
+const SERVER = join(PLUGIN, "server");
 const RELEASE = join(MCP, "release");
 const STAGE = join(RELEASE, ".build");
 
@@ -51,27 +55,114 @@ function fail(message) {
   process.exit(1);
 }
 
-/** Only ever delete inside mcp/release/. */
-function removeInRelease(path) {
+/** Only ever delete inside `root`. */
+function removeInside(root, path) {
   const target = resolve(path);
-  if (target !== RELEASE && !target.startsWith(`${RELEASE}${sep}`)) {
-    fail(`refusing to delete ${target}: it is not inside ${RELEASE}`);
+  if (target !== root && !target.startsWith(`${root}${sep}`)) {
+    fail(`refusing to delete ${target}: it is not inside ${root}`);
   }
   rmSync(target, { recursive: true, force: true });
 }
 
+const removeInRelease = (path) => removeInside(RELEASE, path);
+
 // ---------------------------------------------------------------------------
-// The bundle
+// The server
 // ---------------------------------------------------------------------------
 
-async function bundle() {
+/** No shipped file may be larger than this: past it a scanner stops reading. */
+const MAX_FILE_BYTES = 256 * 1024;
+
+const SERVER_ENTRY = `#!/usr/bin/env node
+// The OpsTracking MCP server. Its code is in lib/, compiled from mcp/src one
+// module per file; node_modules/ holds the dependency files it loads.
+import "./lib/index.js";
+`;
+
+/**
+ * The server inside the plugin, every file readable:
+ *
+ *   server/opstracking-mcp.mjs   the entry .mcp.json and mcp.json start
+ *   server/package.json          marks lib/ as ES modules
+ *   server/lib/                  mcp/src compiled by tsc, one file per module
+ *   server/node_modules/         the dependency files the server loads, copied as published
+ *
+ * esbuild walks the import graph from src/index.ts the way Node resolves it
+ * (same conditions, require() included), and every node_modules file it
+ * reaches is copied with its package's package.json and licence. Nothing is
+ * bundled, minified or rewritten.
+ */
+async function buildServer() {
+  removeInside(SERVER, SERVER);
+  mkdirSync(SERVER, { recursive: true });
+
+  const lib = join(SERVER, "lib");
+  const tsc = spawnSync(
+    join(MCP, "node_modules", ".bin", "tsc"),
+    ["-p", "tsconfig.build.json", "--outDir", lib, "--declaration", "false"],
+    { cwd: MCP, stdio: "inherit" },
+  );
+  if (tsc.error) fail(`could not run tsc (${tsc.error.message}). Run pnpm install first.`);
+  if (tsc.status !== 0) fail(`tsc exited with ${tsc.status}.`);
+
+  const { metafile } = await build({
+    entryPoints: [join(MCP, "src", "index.ts")],
+    bundle: true,
+    platform: "node",
+    target: "node20",
+    format: "esm",
+    write: false,
+    metafile: true,
+    absWorkingDir: MCP,
+    outfile: join(STAGE, "graph.mjs"),
+    logLevel: "warning",
+  });
+
+  const packages = new Map(); // name -> its folder in mcp/node_modules/.pnpm
+  for (const input of Object.keys(metafile.inputs)) {
+    const match = /^(.*node_modules\/\.pnpm\/[^/]+\/node_modules\/)((?:@[^/]+\/)?[^/]+)\/(.+)$/.exec(input);
+    if (!match) continue;
+    const [, store, name, file] = match;
+    const from = resolve(MCP, store, name);
+    const seen = packages.get(name);
+    if (seen && seen !== from) fail(`two versions of ${name} are loaded; node_modules/ can hold only one.`);
+    packages.set(name, from);
+    cpSync(join(from, file), join(SERVER, "node_modules", name, file));
+  }
+  for (const [name, from] of packages) {
+    for (const entry of readdirSync(from)) {
+      if (entry === "package.json" || /^(licen[cs]e|notice)/i.test(entry)) {
+        cpSync(join(from, entry), join(SERVER, "node_modules", name, entry));
+      }
+    }
+  }
+
+  writeFileSync(join(SERVER, "opstracking-mcp.mjs"), SERVER_ENTRY, { mode: 0o755 });
+  writeJson(join(SERVER, "package.json"), { private: true, type: "module" });
+
+  const oversized = listFiles(SERVER).filter((file) => statSync(file).size > MAX_FILE_BYTES);
+  if (oversized.length) {
+    fail(`files over ${MAX_FILE_BYTES / 1024} KB in server/: ${oversized.map((f) => relative(SERVER, f)).join(", ")}`);
+  }
+  return packages.size;
+}
+
+function listFiles(dir) {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+}
+
+/** The bare server as one file, for people who run it outside a plugin (INSTALL.md). */
+async function bundle(outfile) {
   await build({
     entryPoints: [join(MCP, "src", "index.ts")],
     bundle: true,
     platform: "node",
     target: "node20",
     format: "esm",
-    outfile: BUNDLE,
+    outfile,
     // Some dependencies still call require(); give the ESM bundle one.
     banner: { js: "import{createRequire}from'node:module';const require=createRequire(import.meta.url);" },
     logLevel: "warning",
@@ -230,9 +321,9 @@ function stageMarketplace(root) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  await bundle();
-  if (process.argv.includes("--bundle-only")) {
-    process.stdout.write(`Bundled ${relative(ROOT, BUNDLE)}\n`);
+  const count = await buildServer();
+  if (process.argv.includes("--server-only")) {
+    process.stdout.write(`Wrote ${relative(ROOT, SERVER)}/ with ${count} dependency packages\n`);
     return;
   }
   if (process.argv.includes("--repo")) {
@@ -240,7 +331,7 @@ async function main() {
     rmSync(join(PLUGIN, "cursor"), { recursive: true, force: true });
     addCursorFiles(PLUGIN);
     writeCursorMarketplace(ROOT, readJson(join(ROOT, ".claude-plugin", "marketplace.json")), readJson(join(PLUGIN, ".cursor-plugin", "plugin.json")));
-    process.stdout.write("Wrote the bundle and Cursor's files into plugins/opstracking/ and .cursor-plugin/\n");
+    process.stdout.write("Wrote the server and Cursor's files into plugins/opstracking/ and .cursor-plugin/\n");
     return;
   }
   for (const needed of [join(MCP, "INSTALL.md"), join(MCP, "INSTALL-CURSOR.md"), join(ROOT, ".claude-plugin", "marketplace.json")]) {
@@ -250,7 +341,7 @@ async function main() {
   removeInRelease(RELEASE);
   mkdirSync(RELEASE, { recursive: true });
 
-  cpSync(BUNDLE, join(RELEASE, "opstracking-mcp.mjs"));
+  await bundle(join(RELEASE, "opstracking-mcp.mjs"));
 
   // Claude Code and Cursor: one marketplace folder, kept unzipped as well as
   // zipped, because neither app installs from a zip — both add a folder.
