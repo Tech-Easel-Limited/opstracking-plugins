@@ -45,7 +45,7 @@ plugins/opstracking/              the plugin both apps install
   .claude-plugin/plugin.json      Claude manifest, .mcp.json, commands/, skills/
   .cursor-plugin/plugin.json      Cursor manifest, mcp.json, cursor/ (generated)
   server/                         the MCP server, built from mcp/src (generated): lib/ one
-                                  compiled file per module, node_modules/ the dependency
+                                  compiled file per module, vendor/ the dependency
                                   files it loads, unbundled so every file stays readable
 mcp/                              the server's TypeScript source and tests
 ```

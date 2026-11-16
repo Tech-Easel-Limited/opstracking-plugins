@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../vendor/zod/index.js";
 /**
  * Two prompts, both for work people repeat daily. Each ends in a proposal the
  * user confirms — neither writes on its own.

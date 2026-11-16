@@ -6,7 +6,7 @@
  *                                   skills/, commands/
  *   plugins/opstracking/server/     the server as readable files (built here, committed):
  *                                   lib/ compiled from mcp/src one module per file, and
- *                                   node_modules/ holding only the dependency files it loads,
+ *                                   vendor/ holding only the dependency files it loads,
  *                                   as their packages publish them — no bundle, so the plugin
  *                                   directory's security scan can read every file
  *
@@ -38,6 +38,7 @@
  *                                            marketplaces install straight from the Git repository
  */
 import { spawnSync } from "node:child_process";
+import { isBuiltin } from "node:module";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,24 +74,81 @@ const removeInRelease = (path) => removeInside(RELEASE, path);
 /** No shipped file may be larger than this: past it a scanner stops reading. */
 const MAX_FILE_BYTES = 256 * 1024;
 
-const SERVER_ENTRY = `#!/usr/bin/env node
-// The OpsTracking MCP server. Its code is in lib/, compiled from mcp/src one
-// module per file; node_modules/ holds the dependency files it loads.
+// No #! line: .mcp.json and mcp.json start it with `node`.
+const SERVER_ENTRY = `// The OpsTracking MCP server. Its code is in lib/, compiled from mcp/src one
+// module per file; vendor/ holds the dependency files it loads.
 import "./lib/index.js";
 `;
+
+/**
+ * Dependency modules the server never calls, shipped as a stand-in from
+ * scripts/stand-ins/ instead (each file says why), so neither they nor what
+ * only they import end up in server/.
+ */
+const STAND_INS = [
+  { name: "@modelcontextprotocol/sdk", file: "dist/esm/validation/ajv-provider.js", standIn: "ajv-provider.js" },
+  { name: "zod", file: "v4/classic/from-json-schema.js", standIn: "from-json-schema.js" },
+];
+
+const STORE_FILE = /^(.*node_modules\/\.pnpm\/[^/]+\/node_modules\/)((?:@[^/]+\/)?[^/]+)\/(.+)$/;
+
+const standInFor = (path) => {
+  const match = STORE_FILE.exec(path.split(sep).join("/"));
+  return match && STAND_INS.find((s) => s.name === match[2] && s.file === match[3]);
+};
+
+/** Points the import graph at the stand-ins, so what only the originals import is never reached. */
+const standInPlugin = {
+  name: "stand-ins",
+  setup(b) {
+    b.onLoad({ filter: /\.js$/ }, (args) => {
+      const standIn = standInFor(args.path);
+      if (!standIn) return undefined;
+      return { contents: readFileSync(join(MCP, "scripts", "stand-ins", standIn.standIn), "utf8"), loader: "js" };
+    });
+  },
+};
+
+const IMPORT_PREFIX = String.raw`((?:\bfrom|\bimport|\bimport\s*\(|\brequire\s*\()\s*)`;
+
+/** Replaces the module specifier `from` with `to` wherever `code` imports, exports from or requires it. */
+function rewriteSpecifier(code, from, to, where) {
+  const quoted = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`${IMPORT_PREFIX}(["'])${quoted}\\2`, "g");
+  let found = 0;
+  const out = code.replace(pattern, (_, lead, quote) => {
+    found += 1;
+    return `${lead}${quote}${to}${quote}`;
+  });
+  if (!found) fail(`could not find the import of "${from}" in ${where}`);
+  return out;
+}
+
+/** The nearest package.json's "type" for a file inside the package folder `root`. */
+function moduleType(file, root) {
+  for (let dir = dirname(file); dir.startsWith(root); dir = dirname(dir)) {
+    const manifest = join(dir, "package.json");
+    if (existsSync(manifest)) return readJson(manifest).type ?? "commonjs";
+  }
+  return "commonjs";
+}
 
 /**
  * The server inside the plugin, every file readable:
  *
  *   server/opstracking-mcp.mjs   the entry .mcp.json and mcp.json start
- *   server/package.json          marks lib/ as ES modules
+ *   server/package.json          marks every .js file below it as an ES module
  *   server/lib/                  mcp/src compiled by tsc, one file per module
- *   server/node_modules/         the dependency files the server loads, copied as published
+ *   server/vendor/<package>/     the dependency files the server loads, as published,
+ *                                with each package's licence; vendor/README.md lists them
+ *   server/stand-ins/            the STAND_INS above
  *
- * esbuild walks the import graph from src/index.ts the way Node resolves it
- * (same conditions, require() included), and every node_modules file it
- * reaches is copied with its package's package.json and licence. Nothing is
- * bundled, minified or rewritten.
+ * esbuild walks the import graph from src/index.ts the way Node resolves it,
+ * and every file it reaches is copied. Nothing is bundled or minified; the
+ * one change is to import paths. Each bare one ("zod", "@modelcontextprotocol/
+ * sdk/server/mcp.js") becomes the relative path of the file Node would have
+ * loaded, so no package needs a package.json or a node_modules folder to be
+ * found. That works only for ES modules, so a CommonJS file stops the build.
  */
 async function buildServer() {
   removeInside(SERVER, SERVER);
@@ -115,29 +173,76 @@ async function buildServer() {
     metafile: true,
     absWorkingDir: MCP,
     outfile: join(STAGE, "graph.mjs"),
+    plugins: [standInPlugin],
     logLevel: "warning",
   });
 
   const packages = new Map(); // name -> its folder in mcp/node_modules/.pnpm
-  for (const input of Object.keys(metafile.inputs)) {
-    const match = /^(.*node_modules\/\.pnpm\/[^/]+\/node_modules\/)((?:@[^/]+\/)?[^/]+)\/(.+)$/.exec(input);
-    if (!match) continue;
+  /** Where an input of the graph goes in server/, and where its code comes from. */
+  const place = (input) => {
+    const src = /^src\/(.+)\.ts$/.exec(input);
+    if (src) return { to: join(lib, `${src[1]}.js`), from: join(lib, `${src[1]}.js`) };
+    const match = STORE_FILE.exec(input);
+    if (!match) fail(`${input} is neither in src/ nor in a package; it cannot be placed in server/.`);
     const [, store, name, file] = match;
-    const from = resolve(MCP, store, name);
+    const standIn = standInFor(input);
+    if (standIn) return { to: join(SERVER, "stand-ins", standIn.standIn), from: join(MCP, "scripts", "stand-ins", standIn.standIn) };
+    const root = resolve(MCP, store, name);
     const seen = packages.get(name);
-    if (seen && seen !== from) fail(`two versions of ${name} are loaded; node_modules/ can hold only one.`);
-    packages.set(name, from);
-    cpSync(join(from, file), join(SERVER, "node_modules", name, file));
-  }
-  for (const [name, from] of packages) {
-    for (const entry of readdirSync(from)) {
-      if (entry === "package.json" || /^(licen[cs]e|notice)/i.test(entry)) {
-        cpSync(join(from, entry), join(SERVER, "node_modules", name, entry));
-      }
+    if (seen && seen !== root) fail(`two versions of ${name} are loaded; vendor/ can hold only one.`);
+    packages.set(name, root);
+    const from = join(root, file);
+    if (!from.endsWith(".mjs") && !(from.endsWith(".js") && moduleType(from, root) === "module")) {
+      fail(`${name}/${file} is not an ES module; vendor/ cannot hold it without its package.json.`);
     }
+    return { to: join(SERVER, "vendor", name, file), from };
+  };
+
+  for (const [input, { imports }] of Object.entries(metafile.inputs)) {
+    const { to, from } = place(input);
+    let code = readFileSync(from, "utf8").replace(/^#!.*\n/, "");
+    const rewritten = new Set();
+    for (const imp of imports) {
+      if (imp.external) {
+        if (!isBuiltin(imp.path)) fail(`${input} imports ${imp.path}, which esbuild left outside the graph.`);
+        continue;
+      }
+      if (rewritten.has(imp.original)) continue;
+      rewritten.add(imp.original);
+      let spec = relative(dirname(to), place(imp.path).to).split(sep).join("/");
+      if (!spec.startsWith(".")) spec = `./${spec}`;
+      if (spec !== imp.original) code = rewriteSpecifier(code, imp.original, spec, input);
+    }
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, code);
   }
 
-  writeFileSync(join(SERVER, "opstracking-mcp.mjs"), SERVER_ENTRY, { mode: 0o755 });
+  const listed = [];
+  for (const [name, root] of [...packages].sort(([a], [b]) => a.localeCompare(b))) {
+    for (const entry of readdirSync(root)) {
+      if (/^(licen[cs]e|notice)/i.test(entry)) cpSync(join(root, entry), join(SERVER, "vendor", name, entry));
+    }
+    const { version, license } = readJson(join(root, "package.json"));
+    listed.push(`| ${name} | ${version} | ${license} |`);
+  }
+  writeFileSync(
+    join(SERVER, "vendor", "README.md"),
+    [
+      "# Dependencies",
+      "",
+      "The files of each package the server loads, copied from its published release by",
+      "`mcp/scripts/package.mjs`. Only import paths differ from the release: each points",
+      "straight at the file Node would have loaded. Two modules nothing calls are left",
+      "out and replaced by the short files in `../stand-ins/`.",
+      "",
+      "| Package | Version | Licence |",
+      "| --- | --- | --- |",
+      ...listed,
+      "",
+    ].join("\n"),
+  );
+
+  writeFileSync(join(SERVER, "opstracking-mcp.mjs"), SERVER_ENTRY);
   writeJson(join(SERVER, "package.json"), { private: true, type: "module" });
 
   const oversized = listFiles(SERVER).filter((file) => statSync(file).size > MAX_FILE_BYTES);

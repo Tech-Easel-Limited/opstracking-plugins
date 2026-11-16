@@ -10,7 +10,7 @@ import type { AppSlug } from "./app.js";
  * a plugin's settings prompt: the variables then arrive unset (or as their
  * literal `${user_config.…}` placeholders). The file OVERRIDES the
  * environment: it is what somebody set deliberately on this machine, most
- * recently, with `setup` or `config set` — so what they set is what is used.
+ * recently, with `setup` or `settings` — so what they set is what is used.
  *
  *   OPSTRACKING_URL        required — the organization's own origin, e.g.
  *                          https://acme.neoeasel.com. http is allowed only for

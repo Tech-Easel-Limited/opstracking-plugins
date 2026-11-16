@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../vendor/zod/index.js";
 import { setupCommand } from "../app.js";
 import { ConfigError, parseBaseUrl } from "../config.js";
 import { ASK_ADDRESS, CONNECT_TIMEOUT_MS, defaultOpener, PendingConnect } from "../connect.js";

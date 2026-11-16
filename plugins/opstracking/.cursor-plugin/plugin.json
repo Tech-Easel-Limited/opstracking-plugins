@@ -1,7 +1,7 @@
 {
   "name": "opstracking",
   "displayName": "OpsTracking",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Work with OpsTracking from Cursor: read projects, tasks, time, clients, assets and invoices; change what you allowed — projects, teams, clients, tasks, time and invoice drafts — always with your confirmation first; and ask for invites, roles and invoice sends that you approve in the app.",
   "author": {
     "name": "Amento Tech",

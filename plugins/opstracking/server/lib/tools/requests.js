@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../vendor/zod/index.js";
 import { writeOf } from "../access.js";
 import { localToday, mondayOf, untrusted } from "../format.js";
 import { isUuid, projectDetail, resolveClient, resolveContact, resolveInvoice, resolveMembers, resolvePerson, resolveProject, resolveRole, ResolveError, } from "../resolve.js";

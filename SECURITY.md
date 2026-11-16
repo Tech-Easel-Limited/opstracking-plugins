@@ -19,7 +19,11 @@ working days.
   `<workspace-data>` tags and the bundled skill tells the assistant to treat
   it as data, never as instructions.
 - `plugins/opstracking/server/` is built from the TypeScript source in
-  `mcp/src`: `lib/` holds one compiled file per module and `node_modules/`
-  the dependency files the server loads, copied unchanged from the published
-  packages. Nothing is bundled or minified. CI rebuilds it from source on
+  `mcp/src`: `lib/` holds one compiled file per module and `vendor/` the
+  dependency files the server loads, copied from the published packages with
+  only their import paths pointed straight at the files they load
+  (`vendor/README.md` lists each package, version and licence). Two modules
+  the server never calls, the SDK's Ajv validator and zod's
+  `fromJSONSchema`, are replaced by the short files in `stand-ins/`, which
+  refuse if anything calls them. Nothing is bundled or minified. CI rebuilds it from source on
   every push and fails if the committed files differ.

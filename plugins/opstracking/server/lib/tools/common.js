@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../vendor/zod/index.js";
 import { ConfigError } from "../config.js";
 import { NotConnectedError } from "../connection.js";
 import { redact } from "../redact.js";

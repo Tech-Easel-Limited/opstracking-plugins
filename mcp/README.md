@@ -22,8 +22,8 @@ The server is not published to a package registry. `pnpm package` (see
 [Building the release](#building-the-release)) produces the Claude and Cursor
 plugins with the server already inside them — `server/opstracking-mcp.mjs`
 starts it, `server/lib/` is its code compiled one file per module, and
-`server/node_modules/` holds the dependency files it loads, copied as
-published. Nothing is installed from the internet, and nothing is bundled or
+`server/vendor/` holds the dependency files it loads, copied as published
+with only their import paths changed (`server/vendor/README.md`). Nothing is installed from the internet, and nothing is bundled or
 minified, so every file can be read:
 
 - `opstracking-plugins/` (and `opstracking-plugins.zip`, the same folder
@@ -153,13 +153,13 @@ For a machine where no browser can be opened, with a token created by hand in
 
 ```sh
 node opstracking-mcp.mjs setup --app cursor          # address, token (hidden), workspace — Enter keeps a value
-node opstracking-mcp.mjs config --app claude         # show (token masked)
-node opstracking-mcp.mjs config set url http://localhost:3000
-node opstracking-mcp.mjs config set token            # prompts; refuses a token on the command line
-node opstracking-mcp.mjs config unset workspace
+node opstracking-mcp.mjs settings --app claude       # show (token masked)
+node opstracking-mcp.mjs settings url http://localhost:3000
+node opstracking-mcp.mjs settings token               # prompts; refuses a token on the command line
+node opstracking-mcp.mjs settings remove workspace
 ```
 
-`--app claude|cursor` works on `setup` and every `config` form and picks that
+`--app claude|cursor` works on `setup` and every `settings` form and picks that
 app's file; without it they use the shared `config.json`.
 
 `setup` and a change to the address or token are proved against

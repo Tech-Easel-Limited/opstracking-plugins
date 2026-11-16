@@ -18,7 +18,7 @@ import { registerTaskTools } from "./tools/tasks.js";
 import { registerTimeTools } from "./tools/time.js";
 
 export const SERVER_NAME = "opstracking";
-export const SERVER_VERSION = "0.2.1";
+export const SERVER_VERSION = "0.2.2";
 
 const INSTRUCTIONS = [
   "OpsTracking is a work-management product: projects, board tasks, time tracking, clients and invoices.",

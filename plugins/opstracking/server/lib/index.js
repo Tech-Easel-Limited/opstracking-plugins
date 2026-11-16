@@ -1,8 +1,7 @@
-#!/usr/bin/env node
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "../vendor/@modelcontextprotocol/sdk/dist/esm/server/stdio.js";
 import { redact } from "./redact.js";
 import { createServer } from "./server.js";
-import { printUsage, runConfig, runSetup } from "./setup.js";
+import { printUsage, runSettings, runSetup } from "./setup.js";
 // stdout is the protocol channel; anything human goes to stderr, and nothing
 // that goes there ever includes the token.
 async function main() {
@@ -16,8 +15,8 @@ const command = process.argv[2];
 if (command === "setup") {
     void runSetup(process.argv.slice(3));
 }
-else if (command === "config") {
-    void runConfig(process.argv.slice(3));
+else if (command === "settings") {
+    void runSettings(process.argv.slice(3));
 }
 else if (command === "help" || command === "--help" || command === "-h") {
     printUsage();

@@ -126,11 +126,11 @@ export async function runSetup(args = []) {
 const KEYS = ["url", "token", "workspace"];
 const USAGE = `Usage:
   opstracking-mcp setup [--app claude|cursor]      ask for every setting (Enter keeps the current value)
-  opstracking-mcp config [--app claude|cursor]     show the saved settings (token masked)
-  opstracking-mcp config set url <address>
-  opstracking-mcp config set token      asks for the token, hidden — never type it on the command line
-  opstracking-mcp config set workspace <name>
-  opstracking-mcp config unset <url|token|workspace>
+  opstracking-mcp settings [--app claude|cursor]   show the saved settings (token masked)
+  opstracking-mcp settings url <address>
+  opstracking-mcp settings token        asks for the token, hidden — never type it on the command line
+  opstracking-mcp settings workspace <name>
+  opstracking-mcp settings remove <url|token|workspace>
 
 With --app, the settings are that app's own: ~/.opstracking/claude.json or
 cursor.json. Without it, the shared ~/.opstracking/config.json, which an app
@@ -139,33 +139,36 @@ Saved settings override whatever the plugin passes. Restart the app (in Claude
 Code, /reload-plugins) after a change.
 `;
 /**
- * `opstracking-mcp config …` — see or change one saved setting at a time.
+ * `opstracking-mcp settings …` — see or change one saved setting at a time.
  * Every change is checked before it is written; a change to the address or
  * the token is also proved against OpsTracking when both are known.
  */
-export async function runConfig(argv) {
+export async function runSettings(argv) {
     try {
         const { app, rest: args } = takeAppFlag(argv);
         const slug = appSlug(app);
         const path = configFilePath(process.env, slug);
         const readPath = configReadPath(process.env, slug);
         const current = readConfigFile(readPath);
-        const [action, rawKey, ...rest] = args;
-        if (!action) {
+        const [first, ...more] = args;
+        const removing = first === "remove";
+        const rawKey = removing ? more[0] : first;
+        const rest = removing ? [] : more;
+        if (!first) {
             stdout.write(`${readPath}\n`);
             stdout.write(`  url        ${current.url ?? "(not set)"}\n`);
             stdout.write(`  token      ${maskToken(current.token)}\n`);
             stdout.write(`  workspace  ${current.workspace || "(not set)"}\n`);
             return;
         }
-        if ((action !== "set" && action !== "unset") || !KEYS.includes(rawKey)) {
+        if (!KEYS.includes(rawKey)) {
             stdout.write(USAGE);
-            process.exitCode = action === "help" || action === "--help" ? 0 : 1;
+            process.exitCode = first === "help" || first === "--help" ? 0 : 1;
             return;
         }
         const key = rawKey;
         const next = { ...current };
-        if (action === "unset") {
+        if (removing) {
             delete next[key];
             saveConfig(path, next);
             stdout.write(`Removed ${key} from ${path}.\n`);
@@ -174,7 +177,7 @@ export async function runConfig(argv) {
         let value = rest.join(" ").trim();
         if (key === "token") {
             if (value) {
-                throw new ConfigError("Don't put the token on the command line — it would stay in your shell history. Run \"opstracking-mcp config set token\" and paste it when asked.");
+                throw new ConfigError("Don't put the token on the command line — it would stay in your shell history. Run \"opstracking-mcp settings token\" and paste it when asked.");
             }
             const rl = createInterface({ input: stdin, output: stdout, terminal: true });
             try {
@@ -185,7 +188,7 @@ export async function runConfig(argv) {
             }
         }
         if (!value)
-            throw new ConfigError(`Give a value: opstracking-mcp config set ${key} <value>`);
+            throw new ConfigError(`Give a value: opstracking-mcp settings ${key} <value>`);
         if (key === "url")
             next.url = parseBaseUrl(value);
         else if (key === "token")

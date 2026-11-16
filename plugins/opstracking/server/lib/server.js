@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "../vendor/@modelcontextprotocol/sdk/dist/esm/server/mcp.js";
 import { ToolGate } from "./access.js";
 import { Connection } from "./connection.js";
 import { registerPrompts } from "./prompts.js";
@@ -13,7 +13,7 @@ import { registerStructureTools } from "./tools/structure.js";
 import { registerTaskTools } from "./tools/tasks.js";
 import { registerTimeTools } from "./tools/time.js";
 export const SERVER_NAME = "opstracking";
-export const SERVER_VERSION = "0.2.1";
+export const SERVER_VERSION = "0.2.2";
 const INSTRUCTIONS = [
     "OpsTracking is a work-management product: projects, board tasks, time tracking, clients and invoices.",
     "Everything happens inside a workspace; call whoami to see the user's workspaces, their permissions and what this",

@@ -123,8 +123,8 @@ OpsTracking (**Settings → Password & security → API tokens**), then run the
 
 ```sh
 node ~/Downloads/opstracking-mcp.mjs setup --app claude                     # address, token (hidden), workspace
-node ~/Downloads/opstracking-mcp.mjs config --app claude                    # see what is saved (token masked)
-node ~/Downloads/opstracking-mcp.mjs config --app claude set workspace "Delivery"
+node ~/Downloads/opstracking-mcp.mjs settings --app claude                  # see what is saved (token masked)
+node ~/Downloads/opstracking-mcp.mjs settings --app claude workspace "Delivery"
 ```
 
 It checks the token with OpsTracking before saving it.

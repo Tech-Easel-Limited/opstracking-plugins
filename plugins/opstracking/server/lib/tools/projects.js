@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../vendor/zod/index.js";
 import { readOf, writeOf } from "../access.js";
 import { formatMinutes, hasMore, pagingLine, untrusted } from "../format.js";
 import { listColumns, projectDetail, resolveClient, resolveColumn, resolvePerson, ResolveError } from "../resolve.js";
